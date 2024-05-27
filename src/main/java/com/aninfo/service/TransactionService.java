@@ -2,6 +2,7 @@ package com.aninfo.service;
 
 import com.aninfo.exceptions.AccountNotExistsException;
 import com.aninfo.exceptions.DepositNegativeSumException;
+import com.aninfo.exceptions.InsufficientFundsException;
 import com.aninfo.exceptions.TransactionNotExistsException;
 import com.aninfo.model.Account;
 import com.aninfo.model.Transaction;
@@ -25,16 +26,29 @@ public class TransactionService {
         if(transaction.getAccount() == null || StringUtils.isEmpty(transaction.getAccount().getCbu()))
             throw new AccountNotExistsException("La transaccion ingresada no contiene cuenta");
 
-        Optional<Account> account = accountService.findById(transaction.getAccount().getCbu());
+        Optional<Account> optionalAccount = accountService.findById(transaction.getAccount().getCbu());
 
-        Long cbu = account.map(Account::getCbu).orElseThrow();
-        if("DEPOSIT".equalsIgnoreCase(transaction.getType()))
-            accountService.deposit(cbu, transaction.getAmount());
-        else if("WITHDRAW".equalsIgnoreCase(transaction.getType()))
-            accountService.withdraw(cbu, transaction.getAmount());
+        Account account = optionalAccount.map(account1 -> account1).orElseThrow();
+        Double amount = transaction.getAmount();
+        if("DEPOSIT".equalsIgnoreCase(transaction.getType())){
+            if (amount <= 0) {
+                throw new DepositNegativeSumException("Cannot deposit negative sums");
+            }
+
+            if( amount >= 2000){
+                amount = amount * 0.1 > 500 ? amount + 500 : amount * 1.10;
+            }
+            accountService.addFounds(account.getCbu(), amount);
+        }
+        else if("WITHDRAW".equalsIgnoreCase(transaction.getType())){
+            if (account.getBalance() < amount) {
+                throw new InsufficientFundsException("Insufficient funds");
+            }
+            accountService.subtractFounds(account.getCbu(), amount);
+        }
         else
             throw new TransactionNotExistsException("El tipo de transaccion no existe");
-        return null;
+        return transactionRepository.save(transaction);
     }
 
     public Collection<Transaction> getTransactions() {
