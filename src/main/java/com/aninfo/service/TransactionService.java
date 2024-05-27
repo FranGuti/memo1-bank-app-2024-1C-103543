@@ -51,6 +51,10 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
 
+    public Transaction setTransaction(Transaction transaction){
+        return transactionRepository.save(transaction);
+    }
+
     public Collection<Transaction> getTransactions() {
         return transactionRepository.findAll();
     }
@@ -73,7 +77,7 @@ public class TransactionService {
         trans.setAccount(account);
         trans.setAmount(amount);
         trans.setType("WITHDRAW");
-        return createTransaction(trans);
+        return setTransaction(trans);
     }
 
     @Transactional
@@ -82,7 +86,7 @@ public class TransactionService {
         trans.setAccount(account);
         trans.setAmount(amount);
         trans.setType("DEPOSIT");
-        return createTransaction(trans);
+        return setTransaction(trans);
     }
 
     @Transactional
