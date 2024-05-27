@@ -4,6 +4,7 @@ import com.aninfo.exceptions.DepositNegativeSumException;
 import com.aninfo.exceptions.InsufficientFundsException;
 import com.aninfo.model.Account;
 import com.aninfo.repository.AccountRepository;
+import com.aninfo.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,9 @@ public class AccountService {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private TransactionService transactionService;
 
     public Account createAccount(Account account) {
         return accountRepository.save(account);
@@ -38,6 +42,34 @@ public class AccountService {
     }
 
     @Transactional
+    public Account addFounds(Long cbu, Double sum){
+
+        if (sum <= 0) {
+            throw new DepositNegativeSumException("Cannot deposit negative sums");
+        }
+
+        Account account = accountRepository.findAccountByCbu(cbu);
+        account.setBalance(account.getBalance() + sum);
+        accountRepository.save(account);
+
+        return account;
+    }
+
+    @Transactional
+    public Account subtractFounds(Long cbu, Double sum){
+        Account account = accountRepository.findAccountByCbu(cbu);
+
+        if (account.getBalance() < sum) {
+            throw new InsufficientFundsException("Insufficient funds");
+        }
+
+        account.setBalance(account.getBalance() - sum);
+        accountRepository.save(account);
+
+        return account;
+    }
+
+    @Transactional
     public Account withdraw(Long cbu, Double sum) {
         Account account = accountRepository.findAccountByCbu(cbu);
 
@@ -47,6 +79,7 @@ public class AccountService {
 
         account.setBalance(account.getBalance() - sum);
         accountRepository.save(account);
+        transactionService.withdraw(account, sum);
 
         return account;
     }
@@ -61,6 +94,7 @@ public class AccountService {
         Account account = accountRepository.findAccountByCbu(cbu);
         account.setBalance(account.getBalance() + sum);
         accountRepository.save(account);
+        transactionService.deposit(account, sum);
 
         return account;
     }
